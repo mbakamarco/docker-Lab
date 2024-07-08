@@ -56,8 +56,9 @@ resource "aws_key_pair" "ec2_key" {
 }
 # Save file
 resource "local_file" "ssh_key" {
-  filename = "keypair.pem"
+  filename = "${aws_key_pair.ec2_key.key_name}.pem"
   content  = tls_private_key.ec2_key.private_key_pem
+  file_permission = "400"
 }
 
 #data for amazon linux
@@ -80,7 +81,10 @@ resource "aws_instance" "DockerInstance" {
   vpc_security_group_ids = [aws_security_group.web-sg.id]
   key_name               = aws_key_pair.ec2_key.key_name
   user_data              = file("install.sh")
- 
+  root_block_device {
+    volume_size = 30  
+    volume_type = "gp2"  
+  }
   tags = {
     Name = "docker instance"
   }
@@ -91,7 +95,7 @@ resource "aws_instance" "DockerInstance" {
 
 
 output "ssh-command" {
-  value = "ssh -i keypair.pem ec2-user@${aws_instance.DockerInstance.public_dns}"
+  value = "ssh -i ${aws_key_pair.ec2_key.key_name}.pem ec2-user@${aws_instance.DockerInstance.public_dns}"
 }
 
 output "public-ip" {
